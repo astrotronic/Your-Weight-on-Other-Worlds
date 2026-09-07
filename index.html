@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AstroWeight // Deep Space Gravity HUD</title>
+  
+  <!-- Sci-Fi Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Chakra+Petch:wght@500;700&family=Exo+2:wght@600;900&family=Orbitron:wght@700;900&family=Press+Start+2P&family=Quantico:ital,wght@1,700&family=Share+Tech+Mono&family=Silkscreen&family=VT323&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #030712;
+      --panel-bg: rgba(15, 23, 42, 0.75);
+      --panel-border: rgba(56, 189, 248, 0.25);
+      --accent-cyan: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.4);
+      --text-main: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Chakra Petch', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 10%, rgba(30, 58, 138, 0.35) 0%, transparent 60%),
+        radial-gradient(circle at 80% 80%, rgba(88, 28, 135, 0.2) 0%, transparent 50%);
+    }
+
+    /* Ambient CRT Scanline & Grid Effect */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1280px;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      z-index: 10;
+    }
+
+    header {
+      text-align: center;
+      position: relative;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    header h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.2rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #ffffff 0%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    header p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    /* Input & Control Panel */
+    .controls-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(12px);
+      border-radius: 12px;
+      padding: 1.25rem 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1.5rem;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .input-group label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      color: var(--accent-cyan);
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    input[type="number"] {
+      background: rgba(3, 7, 18, 0.8);
+      border: 1px solid var(--panel-border);
+      color: #fff;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.4rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      outline: none;
+      width: 140px;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8);
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--accent-glow), inset 0 0 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .control-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .unit-toggle, .audio-toggle-btn {
+      display: flex;
+      background: rgba(3, 7, 18, 0.8);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 3px;
+      cursor: pointer;
+    }
+
+    .audio-toggle-btn {
+      padding: 0.5rem 1.2rem;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .audio-toggle-btn.active {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: #10b981;
+      color: #34d399;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .toggle-opt {
+      padding: 0.5rem 1.2rem;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border-radius: 5px;
+      transition: all 0.3s ease;
+      color: var(--text-dim);
+    }
+
+    .toggle-opt.active {
+      background: var(--accent-cyan);
+      color: #000;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* Grid Selector for Planets */
+    .celestial-selector {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .celestial-btn {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 0.75rem 0.4rem;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(8px);
+    }
+
+    .celestial-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: 0.5s;
+    }
+
+    .celestial-btn:hover::before {
+      left: 100%;
+    }
+
+    .celestial-btn:hover {
+      border-color: var(--theme-color, var(--accent-cyan));
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 10px var(--theme-color, var(--accent-glow));
+    }
+
+    .celestial-btn.active {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: var(--theme-color, var(--accent-cyan));
+      box-shadow: inset 0 0 12px rgba(255,255,255,0.05), 0 0 15px var(--theme-color, var(--accent-glow));
+    }
+
+    .planet-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      box-shadow: inset -6px -6px 8px rgba(0,0,0,0.7), 0 0 8px rgba(255,255,255,0.2);
+    }
+
+    .celestial-btn span {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-main);
+      text-align: center;
+    }
+
+    /* Main Viewport Stage */
+    .stage {
+      position: relative;
+      width: 100%;
+      height: 500px;
+      border-radius: 16px;
+      border: 1px solid var(--panel-border);
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    /* Surface Canvas Layer */
+    canvas#surfaceCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Sci-Fi HUD Overlay Elements */
+    .hud-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 2;
+      pointer-events: none;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at center, transparent 40%, rgba(3, 7, 18, 0.6) 100%);
+    }
+
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .world-info {
+      background: rgba(3, 7, 18, 0.75);
+      border-left: 4px solid var(--active-color, var(--accent-cyan));
+      padding: 0.85rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      backdrop-filter: blur(8px);
+      max-width: 580px;
+    }
+
+    .world-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow: 0 0 10px var(--active-color, var(--accent-cyan));
+    }
+
+    .world-meta {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-top: 0.25rem;
+    }
+
+    /* Atmospheric Meter Gauge HUD Component */
+    .atmosphere-meter-box {
+      margin-top: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .atm-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .atm-label-row span:last-child {
+      color: var(--active-color, var(--accent-cyan));
+      font-weight: 700;
+    }
+
+    .atm-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .atm-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--active-color, var(--accent-cyan));
+      box-shadow: 0 0 8px var(--active-color, var(--accent-cyan));
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s ease;
+    }
+
+    .telemetry-badge {
+      background: rgba(3, 7, 18, 0.65);
+      border: 1px solid var(--panel-border);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      backdrop-filter: blur(8px);
+      white-space: nowrap;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 0.3; transform: scale(0.8); }
+    }
+
+    /* Main Display for Self-Illuminated Weight */
+    .weight-display-card {
+      position: relative;
+      z-index: 3;
+      margin-bottom: 2rem;
+      background: rgba(3, 7, 18, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 1.5rem 3rem;
+      text-align: center;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.05);
+      min-width: 320px;
+      transition: all 0.4s ease;
+    }
+
+    .weight-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 3px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Dynamic font self-illuminated display */
+    .illuminated-weight {
+      font-size: 4rem;
+      line-height: 1.1;
+      font-weight: 700;
+      color: var(--active-color, #fff);
+      text-shadow: 
+        0 0 5px #fff,
+        0 0 15px var(--active-color, var(--accent-cyan)),
+        0 0 30px var(--active-color, var(--accent-cyan)),
+        0 0 50px var(--active-color, var(--accent-cyan));
+      transition: font-family 0.3s ease, color 0.4s ease, text-shadow 0.4s ease;
+      word-break: break-all;
+    }
+
+    .weight-unit {
+      font-size: 1.5rem;
+      margin-left: 0.25rem;
+      opacity: 0.85;
+    }
+
+    .gravity-ratio {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin-top: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .controls-panel {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .control-actions {
+        justify-content: space-between;
+      }
+
+      .input-group {
+        justify-content: space-between;
+      }
+
+      .hud-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .illuminated-weight {
+        font-size: 2.8rem;
+      }
+
+      .weight-display-card {
+        padding: 1.25rem 1.5rem;
+        min-width: 260px;
+      }
+
+      .world-title {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>AstroWeight // Gravitational Matrix</h1>
+      <p>Relative Terrestrial Surface Telemetry & Mass Visualizer</p>
+    </header>
+
+    <!-- Controls Panel -->
+    <section class="controls-panel">
+      <div class="input-group">
+        <label for="earthWeight">EARTH MASS INPUT:</label>
+        <div class="input-wrapper">
+          <input type="number" id="earthWeight" value="150" min="0" max="9999" step="any">
+        </div>
+      </div>
+
+      <div class="control-actions">
+        <button class="audio-toggle-btn" id="audioToggleBtn">
+          <span id="audioIcon">🔇</span>
+          <span id="audioText">AUDIO: OFF</span>
+        </button>
+
+        <div class="unit-toggle" id="unitToggle">
+          <div class="toggle-opt active" data-unit="lbs">IMPERIAL (LBS)</div>
+          <div class="toggle-opt" data-unit="kg">METRIC (KG)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grid Selector for Planets -->
+    <section class="celestial-selector" id="celestialSelector">
+      <!-- Generated via JS -->
+    </section>
+
+    <!-- Visualizer Stage -->
+    <main class="stage" id="stageContainer">
+      <canvas id="surfaceCanvas"></canvas>
+      
+      <div class="hud-overlay">
+        <div class="hud-header">
+          <div class="world-info" id="worldInfo">
+            <div class="world-title" id="worldName">MERCURY</div>
+            <div class="world-meta" id="worldMeta">GRAVITY: 0.38g | 3.70 m/s²</div>
+            
+            <!-- Atmospheric Density Gauge HUD Box -->
+            <div class="atmosphere-meter-box">
+              <div class="atm-label-row">
+                <span>ATMOSPHERIC DENSITY</span>
+                <span id="atmText">TRACE EXOSPHERE</span>
+              </div>
+              <div class="atm-bar-bg">
+                <div class="atm-bar-fill" id="atmBarFill"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="telemetry-badge">
+            <div class="pulse-dot"></div>
+            <span>SURFACE FEED ONLINE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Weight Display Box -->
+      <div class="weight-display-card" id="weightCard">
+        <div class="weight-label">CONVERTED LOCAL MASS</div>
+        <div class="illuminated-weight" id="weightDisplay">
+          0.0 <span class="weight-unit" id="unitDisplay">LBS</span>
+        </div>
+        <div class="gravity-ratio" id="gravityRatio">57.0% OF EARTH WEIGHT</div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Celestial Bodies Dataset with custom surface parameters
+    const CELESTIAL_DATA = [
+      {
+        id: 'mercury',
+        name: 'Mercury',
+        gravity: 0.378,
+        gravityMs: 3.70,
+        unitFont: "'Orbitron', sans-serif",
+        color: '#94a3b8',
+        surfaceType: 'mercury-scarps',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #cbd5e1, #334155)',
+        metaInfo: 'Thrust-fault scarps (rupes), ancient impact craters & smooth lava plains',
+        atmDensityVal: 0,
+        atmText: 'TRACE EXOSPHERE (< 10⁻¹⁵ atm)'
+      },
+      {
+        id: 'venus',
+        name: 'Venus',
+        gravity: 0.907,
+        gravityMs: 8.87,
+        unitFont: "'Audiowide', cursive",
+        color: '#facc15',
+        surfaceType: 'toxic-clouds',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #fde047, #a16207)',
+        metaInfo: 'Sulfuric cloud canopy & volcanic basalt plains',
+        atmDensityVal: 92,
+        atmText: 'CRUSHING DENSE CO₂ (92.0 atm)'
+      },
+      {
+        id: 'mars',
+        name: 'Mars',
+        gravity: 0.379,
+        gravityMs: 3.72,
+        unitFont: "'Share Tech Mono', monospace",
+        color: '#ef4444',
+        surfaceType: 'red-dust',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #fca5a5, #991b1b)',
+        metaInfo: 'Rust-dusted desert canyons & high sand dunes',
+        atmDensityVal: 0.006,
+        atmText: 'THIN CO₂ ATMOSPHERE (0.006 atm)'
+      },
+      {
+        id: 'moon',
+        name: "Earth's Moon",
+        gravity: 0.166,
+        gravityMs: 1.62,
+        unitFont: "'VT323', monospace",
+        color: '#e2e8f0',
+        surfaceType: 'grey-regolith',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #ffffff, #475569)',
+        metaInfo: 'Vacuum & silicate regolith',
+        atmDensityVal: 0,
+        atmText: 'VACUUM EXOSPHERE (~0 atm)'
+      },
+      {
+        id: 'ceres',
+        name: 'Ceres',
+        gravity: 0.029,
+        gravityMs: 0.28,
+        unitFont: "'Silkscreen', monospace",
+        color: '#94a3b8',
+        surfaceType: 'asteroid-brightspots',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #cbd5e1, #334155)',
+        metaInfo: 'Asteroid Belt dwarf world & reflective sodium carbonate spots',
+        atmDensityVal: 0,
+        atmText: 'TRANSIENT WATER VAPOR (Trace)'
+      },
+      {
+        id: 'io',
+        name: "Jupiter's Io",
+        gravity: 0.183,
+        gravityMs: 1.79,
+        unitFont: "'Exo 2', sans-serif",
+        color: '#eab308',
+        surfaceType: 'sulfur-volcanoes',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #fde047, #b45309, #1c1917)',
+        metaInfo: 'Hyper-volcanic sulfur lakes, calderas & continuous eruptions',
+        atmDensityVal: 0.000000001,
+        atmText: 'COLLAPSED SO₂ ATMOSPHERE (~10⁻⁹ atm)'
+      },
+      {
+        id: 'europa',
+        name: "Jupiter's Europa",
+        gravity: 0.134,
+        gravityMs: 1.31,
+        unitFont: "'Chakra Petch', sans-serif",
+        color: '#38bdf8',
+        surfaceType: 'cracked-ice',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #e0f2fe, #0369a1)',
+        metaInfo: 'Subsurface liquid ocean covered by chaotic cracked ice',
+        atmDensityVal: 0.000000000001,
+        atmText: 'TRACE OXYGEN EXOSPHERE (~10⁻¹² atm)'
+      },
+      {
+        id: 'ganymede',
+        name: "Jupiter's Ganymede",
+        gravity: 0.146,
+        gravityMs: 1.43,
+        unitFont: "'Quantico', sans-serif",
+        color: '#a1a1aa',
+        surfaceType: 'grooved-ice',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #e4e4e7, #52525b, #18181b)',
+        metaInfo: 'Magnetized grooved ice terrain & ancient dark impacts',
+        atmDensityVal: 0.000000000001,
+        atmText: 'TRACE OXYGEN EXOSPHERE (~10⁻¹² atm)'
+      },
+      {
+        id: 'titan',
+        name: "Saturn's Titan",
+        gravity: 0.138,
+        gravityMs: 1.35,
+        unitFont: "'Exo 2', sans-serif",
+        color: '#f97316',
+        surfaceType: 'methane-haze',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #fed7aa, #c2410c)',
+        metaInfo: 'Dense nitrogen smog & liquid methane coastal seas',
+        atmDensityVal: 1.48,
+        atmText: 'DENSE NITROGEN HAZE (1.48 atm)'
+      },
+      {
+        id: 'enceladus',
+        name: "Saturn's Enceladus",
+        gravity: 0.0113,
+        gravityMs: 0.113,
+        unitFont: "'Orbitron', sans-serif",
+        color: '#06b6d4',
+        surfaceType: 'ice-geysers-blue',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #ffffff, #0891b2, #0f172a)',
+        metaInfo: 'Bright white snow, cyan tiger-stripe fissures & polar cryovolcanoes',
+        atmDensityVal: 0.00000000001,
+        atmText: 'WATER VAPOR PLUME EXOSPHERE'
+      },
+      {
+        id: 'triton',
+        name: "Neptune's Triton",
+        gravity: 0.079,
+        gravityMs: 0.78,
+        unitFont: "'Quantico', sans-serif",
+        color: '#e5c3b2',
+        surfaceType: 'cryo-geysers',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #f2e3d8, #d1b2a1, #6e6375)',
+        metaInfo: 'Peach-lavender polar cap & cantaloupe terrain geysers',
+        atmDensityVal: 0.000014,
+        atmText: 'ULTRA-THIN NITROGEN (14 µbar)'
+      },
+      {
+        id: 'pluto',
+        name: 'Pluto',
+        gravity: 0.063,
+        gravityMs: 0.62,
+        unitFont: "'Press Start 2P', monospace",
+        color: '#d9c3a3',
+        surfaceType: 'nitrogen-glacier',
+        iconGrad: 'radial-gradient(circle at 30% 30%, #f5eedc, #a87a53, #3d2817)',
+        metaInfo: 'Cream nitrogen glaciers & dark tholin mountain terrain',
+        atmDensityVal: 0.00001,
+        atmText: 'THIN SEASONAL HAZE (10 µbar)'
+      }
+    ];
+
+    // App State
+    let currentUnit = 'lbs';
+    let currentBody = CELESTIAL_DATA[0];
+    let earthWeight = 150;
+    let isAudioEnabled = false;
+
+    // Web Audio Synthesizer Engine
+    let audioCtx = null;
+    let ambientDroneOsc = null;
+    let ambientDroneGain = null;
+    let lfoFilterOsc = null;
+
+    async function initAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+      }
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+    }
+
+    function playClickSound(freq = 900, duration = 0.05) {
+      if (!isAudioEnabled || !audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0;
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.4, audioCtx.currentTime + duration);
+
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) { console.error(e); }
+    }
+
+    function playWarpSweep(gravityRatio) {
+      if (!isAudioEnabled || !audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const filter = audioCtx.createBiquadFilter();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0;
+
+        const startPitch = 120 + (1 - Math.min(gravityRatio, 1.0)) * 400;
+        const endPitch = startPitch * 1.8;
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(startPitch, now);
+        osc.frequency.exponentialRampToValueAtTime(endPitch, now + 0.25);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(300, now);
+        filter.frequency.exponentialRampToValueAtTime(1800, now + 0.2);
+
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } catch (e) { console.error(e); }
+    }
+
+    function startAmbientDrone() {
+      if (!audioCtx) return;
+      stopAmbientDrone();
+
+      try {
+        ambientDroneOsc = audioCtx.createOscillator();
+        ambientDroneGain = audioCtx.createGain();
+        ambientDroneGain.gain.value = 0;
+
+        const filter = audioCtx.createBiquadFilter();
+
+        ambientDroneOsc.type = 'sawtooth';
+        ambientDroneOsc.frequency.setValueAtTime(45, audioCtx.currentTime);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(110, audioCtx.currentTime);
+
+        lfoFilterOsc = audioCtx.createOscillator();
+        const lfoGain = audioCtx.createGain();
+        lfoGain.gain.value = 35;
+
+        lfoFilterOsc.frequency.setValueAtTime(0.25, audioCtx.currentTime);
+        lfoGain.gain.setValueAtTime(35, audioCtx.currentTime);
+
+        lfoFilterOsc.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+
+        ambientDroneGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        ambientDroneGain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 1.2);
+
+        ambientDroneOsc.connect(filter);
+        filter.connect(ambientDroneGain);
+        ambientDroneGain.connect(audioCtx.destination);
+
+        ambientDroneOsc.start();
+        lfoFilterOsc.start();
+      } catch (e) { console.error(e); }
+    }
+
+    function stopAmbientDrone() {
+      if (ambientDroneGain && audioCtx) {
+        try {
+          ambientDroneGain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+          setTimeout(() => {
+            if (ambientDroneOsc) {
+              ambientDroneOsc.stop();
+              ambientDroneOsc.disconnect();
+              ambientDroneOsc = null;
+            }
+            if (lfoFilterOsc) {
+              lfoFilterOsc.stop();
+              lfoFilterOsc.disconnect();
+              lfoFilterOsc = null;
+            }
+          }, 450);
+        } catch (e) { console.error(e); }
+      }
+    }
+
+    // DOM Elements
+    const earthWeightInput = document.getElementById('earthWeight');
+    const unitToggle = document.getElementById('unitToggle');
+    const audioToggleBtn = document.getElementById('audioToggleBtn');
+    const audioIcon = document.getElementById('audioIcon');
+    const audioText = document.getElementById('audioText');
+    const celestialSelector = document.getElementById('celestialSelector');
+    const worldNameEl = document.getElementById('worldName');
+    const worldMetaEl = document.getElementById('worldMeta');
+    const weightDisplayEl = document.getElementById('weightDisplay');
+    const gravityRatioEl = document.getElementById('gravityRatio');
+    const atmBarFill = document.getElementById('atmBarFill');
+    const atmTextEl = document.getElementById('atmText');
+    const canvas = document.getElementById('surfaceCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Atmospheric Log-Scale Visual Calculator
+    function getAtmosphereBarPercent(val) {
+      if (!val || val <= 0) return 2; // 2% visual tick for vacuum
+      if (val >= 90) return 100;
+      if (val >= 1) return 55 + (val / 90) * 45;
+      return Math.max(3, (Math.log10(val) + 12) / 12 * 50);
+    }
+
+    // Initialize Celestial Buttons
+    function initButtons() {
+      celestialSelector.innerHTML = '';
+      CELESTIAL_DATA.forEach(body => {
+        const btn = document.createElement('button');
+        btn.className = `celestial-btn ${body.id === currentBody.id ? 'active' : ''}`;
+        btn.style.setProperty('--theme-color', body.color);
+        btn.dataset.id = body.id;
+
+        btn.innerHTML = `
+          <div class="planet-icon" style="background: ${body.iconGrad}"></div>
+          <span>${body.name.replace(/.*'s /, '')}</span>
+        `;
+
+        btn.addEventListener('click', async () => {
+          await initAudioContext();
+          document.querySelectorAll('.celestial-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentBody = body;
+          updateDisplay();
+          playWarpSweep(body.gravity);
+        });
+
+        celestialSelector.appendChild(btn);
+      });
+    }
+
+    // Audio Toggle Listener
+    audioToggleBtn.addEventListener('click', async () => {
+      await initAudioContext();
+      isAudioEnabled = !isAudioEnabled;
+
+      if (isAudioEnabled) {
+        audioToggleBtn.classList.add('active');
+        audioIcon.textContent = '🔊';
+        audioText.textContent = 'AUDIO: ONLINE';
+        startAmbientDrone();
+        playClickSound(1200, 0.08);
+      } else {
+        audioToggleBtn.classList.remove('active');
+        audioIcon.textContent = '🔇';
+        audioText.textContent = 'AUDIO: OFF';
+        stopAmbientDrone();
+      }
+    });
+
+    // Unit Toggle Handler
+    unitToggle.addEventListener('click', async (e) => {
+      await initAudioContext();
+      const option = e.target.closest('.toggle-opt');
+      if (!option || option.classList.contains('active')) return;
+
+      document.querySelectorAll('.toggle-opt').forEach(o => o.classList.remove('active'));
+      option.classList.add('active');
+
+      const newUnit = option.dataset.unit;
+      
+      let val = parseFloat(earthWeightInput.value) || 0;
+      if (newUnit === 'kg' && currentUnit === 'lbs') {
+        val = val * 0.45359237;
+      } else if (newUnit === 'lbs' && currentUnit === 'kg') {
+        val = val / 0.45359237;
+      }
+
+      currentUnit = newUnit;
+      earthWeightInput.value = val % 1 === 0 ? val : val.toFixed(1);
+      updateDisplay();
+      playClickSound(750, 0.06);
+    });
+
+    earthWeightInput.addEventListener('input', async () => {
+      await initAudioContext();
+      updateDisplay();
+      playClickSound(1000, 0.02);
+    });
+
+    // Main Update Function
+    function updateDisplay() {
+      earthWeight = parseFloat(earthWeightInput.value) || 0;
+      const convertedWeight = earthWeight * currentBody.gravity;
+
+      worldNameEl.textContent = currentBody.name;
+      worldMetaEl.textContent = `GRAVITY: ${currentBody.gravity}g | ${currentBody.gravityMs} m/s² — ${currentBody.metaInfo}`;
+
+      if (atmBarFill && atmTextEl) {
+        atmTextEl.textContent = currentBody.atmText;
+        const fillPct = getAtmosphereBarPercent(currentBody.atmDensityVal);
+        atmBarFill.style.width = `${fillPct}%`;
+      }
+
+      document.documentElement.style.setProperty('--active-color', currentBody.color);
+      weightDisplayEl.style.fontFamily = currentBody.unitFont;
+      
+      const formattedNum = convertedWeight.toLocaleString(undefined, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 2
+      });
+
+      weightDisplayEl.innerHTML = `${formattedNum} <span class="weight-unit" id="unitDisplay">${currentUnit.toUpperCase()}</span>`;
+      
+      const percent = (currentBody.gravity * 100).toFixed(1);
+      gravityRatioEl.textContent = `${percent}% OF EARTH WEIGHT`;
+
+      initParticles();
+    }
+
+    /* Canvas Procedural Visualizer for Planet Surfaces */
+    let animationFrameId;
+    let particles = [];
+    let starField = [];
+    let geyserTime = 0;
+
+    function resizeCanvas() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      initStars();
+    }
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      initParticles();
+    });
+
+    function initStars() {
+      starField = [];
+      for (let i = 0; i < 90; i++) {
+        starField.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * (canvas.height * 0.65),
+          radius: Math.random() * 1.2 + 0.3,
+          alpha: Math.random() * 0.8 + 0.2
+        });
+      }
+    }
+
+    function initParticles() {
+      particles = [];
+      let particleCount = 40;
+      if (['toxic-clouds', 'methane-haze', 'red-dust', 'sulfur-volcanoes'].includes(currentBody.surfaceType)) {
+        particleCount = 80;
+      } else if (['cryo-geysers', 'ice-geysers-blue'].includes(currentBody.surfaceType)) {
+        particleCount = 110;
+      }
+
+      for (let i = 0; i < particleCount; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 2 + 0.5,
+          vx: (Math.random() - 0.5) * (currentBody.surfaceType === 'red-dust' ? 2.5 : 0.6),
+          vy: (Math.random() - 0.5) * 0.5 - (['cryo-geysers', 'ice-geysers-blue'].includes(currentBody.surfaceType) ? 1.8 : 0),
+          alpha: Math.random() * 0.7 + 0.2
+        });
+      }
+    }
+
+    function renderSurface() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      geyserTime += 0.03;
+
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // 1. Sky / Atmosphere Layer
+      drawSkyGradient(w, h);
+
+      // Starfield for vacuum/thin-atmosphere worlds
+      if (['mercury-scarps', 'grey-regolith', 'asteroid-brightspots', 'cracked-ice', 'nitrogen-glacier', 'cryo-geysers', 'sulfur-volcanoes', 'grooved-ice', 'ice-geysers-blue'].includes(currentBody.surfaceType)) {
+        drawStars();
+      }
+
+      // 2. Specific Terrain Features & Realistic Geography
+      switch (currentBody.surfaceType) {
+        case 'mercury-scarps': // Mercury Thrust-Fault Scarps & Foreground Craters
+          drawMercurySurface(w, h);
+          break;
+
+        case 'toxic-clouds': // Venus
+          drawVenusianLavaBasalt(w, h);
+          break;
+
+        case 'red-dust': // Mars
+          drawMartianCanyonsAndDunes(w, h);
+          break;
+
+        case 'grey-regolith': // Moon
+          drawMoonRegolithLandscape(w, h);
+          break;
+
+        case 'asteroid-brightspots': // Ceres
+          drawCeresAsteroid(w, h);
+          break;
+
+        case 'sulfur-volcanoes': // Jupiter's Io
+          drawIoVolcanoes(w, h);
+          break;
+
+        case 'cracked-ice': // Jupiter's Europa
+          drawEuropaIcyShell(w, h);
+          break;
+
+        case 'grooved-ice': // Jupiter's Ganymede
+          drawGanymedeGrooves(w, h);
+          break;
+
+        case 'methane-haze': // Titan
+          drawTitanMethaneShore(w, h);
+          break;
+
+        case 'ice-geysers-blue': // Saturn's Enceladus
+          drawEnceladusTigerStripes(w, h);
+          break;
+
+        case 'cryo-geysers': // Triton
+          drawTritonGeysers(w, h);
+          break;
+
+        case 'nitrogen-glacier': // Pluto
+        default:
+          drawPlutoGlaciers(w, h);
+          break;
+      }
+
+      // 3. Floating Atmospheric / Surface Particles
+      ctx.fillStyle = currentBody.color;
+      particles.forEach(p => {
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0) p.x = w;
+        if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h;
+        if (p.y > h) p.y = 0;
+      });
+      ctx.globalAlpha = 1.0;
+
+      animationFrameId = requestAnimationFrame(renderSurface);
+    }
+
+    function drawSkyGradient(w, h) {
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      switch (currentBody.surfaceType) {
+        case 'mercury-scarps':
+          skyGrad.addColorStop(0, '#000000');
+          skyGrad.addColorStop(0.6, '#090d16');
+          skyGrad.addColorStop(1, '#1e293b');
+          break;
+        case 'toxic-clouds':
+          skyGrad.addColorStop(0, '#2e1202');
+          skyGrad.addColorStop(0.5, '#78350f');
+          skyGrad.addColorStop(1, '#d97706');
+          break;
+        case 'red-dust':
+          skyGrad.addColorStop(0, '#0c0202');
+          skyGrad.addColorStop(0.5, '#450a0a');
+          skyGrad.addColorStop(1, '#7f1d1d');
+          break;
+        case 'grey-regolith':
+        case 'asteroid-brightspots':
+        case 'grooved-ice':
+          skyGrad.addColorStop(0, '#000000');
+          skyGrad.addColorStop(0.7, '#080d1a');
+          skyGrad.addColorStop(1, '#1e293b');
+          break;
+        case 'sulfur-volcanoes':
+          skyGrad.addColorStop(0, '#000000');
+          skyGrad.addColorStop(0.6, '#1a0c02');
+          skyGrad.addColorStop(1, '#451a03');
+          break;
+        case 'cracked-ice':
+          skyGrad.addColorStop(0, '#020617');
+          skyGrad.addColorStop(0.5, '#075985');
+          skyGrad.addColorStop(1, '#0284c7');
+          break;
+        case 'ice-geysers-blue':
+          skyGrad.addColorStop(0, '#000000');
+          skyGrad.addColorStop(0.5, '#042f2e');
+          skyGrad.addColorStop(1, '#0e7490');
+          break;
+        case 'methane-haze':
+          skyGrad.addColorStop(0, '#451a03');
+          skyGrad.addColorStop(0.6, '#9a3412');
+          skyGrad.addColorStop(1, '#ea580c');
+          break;
+        case 'cryo-geysers':
+          skyGrad.addColorStop(0, '#000000');
+          skyGrad.addColorStop(0.6, '#130f1c');
+          skyGrad.addColorStop(1, '#2a2035');
+          break;
+        case 'nitrogen-glacier':
+        default:
+          skyGrad.addColorStop(0, '#000000');
+          skyGrad.addColorStop(0.6, '#1a0e07');
+          skyGrad.addColorStop(1, '#3a2012');
+          break;
+      }
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function drawStars() {
+      ctx.fillStyle = '#ffffff';
+      starField.forEach(s => {
+        ctx.globalAlpha = s.alpha;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1.0;
+    }
+
+    // --- GEOLOGICAL SURFACES ---
+
+    // 1. Mercury (Distinct Lobate Scarps, Intercrater Lava Plains & Foreground Impact Craters)
+    function drawMercurySurface(w, h) {
+      // Jagged Thrust Fault Cliff Line (Discovery Rupes / Scarp Terrain)
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.58);
+      ctx.lineTo(w * 0.22, h * 0.56);
+      ctx.lineTo(w * 0.32, h * 0.68); // Sharp thrust-fault drop
+      ctx.lineTo(w * 0.68, h * 0.63);
+      ctx.lineTo(w * 0.78, h * 0.75); // Secondary scarp cliff
+      ctx.lineTo(w, h * 0.68);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      // Bright Sunlit Edge Highlights along the Scarp Cliffs
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.58);
+      ctx.lineTo(w * 0.22, h * 0.56);
+      ctx.moveTo(w * 0.32, h * 0.68);
+      ctx.lineTo(w * 0.68, h * 0.63);
+      ctx.stroke();
+
+      // Smooth Volcanic Intercrater Lava Plains in foreground
+      const plainGrad = ctx.createLinearGradient(0, h * 0.72, 0, h);
+      plainGrad.addColorStop(0, '#475569');
+      plainGrad.addColorStop(1, '#020617');
+      ctx.fillStyle = plainGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.74);
+      for (let x = 0; x <= w; x += 25) {
+        ctx.lineTo(x, h * 0.74 + Math.sin(x * 0.015) * 5);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      // Foreground Impact Craters (subtle dark interiors & light rims)
+      const mercuryCraters = [
+        { x: w * 0.22, y: h * 0.83, rx: w * 0.09, ry: 11 },
+        { x: w * 0.72, y: h * 0.86, rx: w * 0.13, ry: 15 },
+        { x: w * 0.48, y: h * 0.92, rx: w * 0.06, ry: 7 }
+      ];
+
+      mercuryCraters.forEach(c => {
+        // Dark crater floor shadow
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, c.rx, c.ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sunlit rim highlight
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(c.x - c.rx * 0.08, c.y - 1.5, c.rx * 0.95, c.ry * 0.85, 0, Math.PI * 0.75, Math.PI * 1.8);
+        ctx.stroke();
+      });
+
+      // Erased / Fractured ancient crater rim cut through by a thrust fault
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.ellipse(w * 0.5, h * 0.82, w * 0.12, 14, 0, 0, Math.PI * 1.6);
+      ctx.stroke();
+    }
+
+    // 2. Moon (Rolling Lunar Mare & Deep Circular Craters)
+    function drawMoonRegolithLandscape(w, h) {
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.62);
+      for (let x = 0; x <= w; x += 30) {
+        let y = h * 0.62 + Math.sin(x * 0.02) * 20 + Math.cos(x * 0.05) * 12;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      const fgGrad = ctx.createLinearGradient(0, h * 0.7, 0, h);
+      fgGrad.addColorStop(0, '#cbd5e1');
+      fgGrad.addColorStop(1, '#020617');
+      ctx.fillStyle = fgGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.72);
+      for (let x = 0; x <= w; x += 15) {
+        let y = h * 0.72 + Math.sin(x * 0.012) * 10;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      const craters = [
+        { x: w * 0.25, y: h * 0.82, rx: w * 0.12, ry: 18 },
+        { x: w * 0.65, y: h * 0.88, rx: w * 0.18, ry: 24 },
+        { x: w * 0.85, y: h * 0.78, rx: w * 0.08, ry: 10 }
+      ];
+
+      craters.forEach(c => {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, c.rx, c.ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(c.x - c.rx * 0.1, c.y - 2, c.rx * 0.95, c.ry * 0.9, 0, Math.PI * 0.7, Math.PI * 1.8);
+        ctx.stroke();
+      });
+    }
+
+    // 3. Venus (Volcanic Basalt Plain)
+    function drawVenusianLavaBasalt(w, h) {
+      ctx.fillStyle = '#451a03';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.65);
+      for (let x = 0; x <= w; x += 25) {
+        ctx.lineTo(x, h * 0.65 + Math.sin(x * 0.015) * 25);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      ctx.fillStyle = '#1c0a00';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.75);
+      for (let x = 0; x <= w; x += 15) {
+        ctx.lineTo(x, h * 0.75 + Math.cos(x * 0.02) * 12);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      ctx.strokeStyle = '#f97316';
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 3.5;
+      
+      ctx.beginPath();
+      ctx.moveTo(w * 0.1, h * 0.82);
+      ctx.lineTo(w * 0.35, h * 0.88);
+      ctx.lineTo(w * 0.5, h * 0.84);
+      ctx.lineTo(w * 0.75, h * 0.95);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+    }
+
+    // 4. Mars (Canyon Dunes)
+    function drawMartianCanyonsAndDunes(w, h) {
+      ctx.fillStyle = '#450a0a';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.58);
+      ctx.lineTo(w * 0.2, h * 0.58);
+      ctx.lineTo(w * 0.25, h * 0.68);
+      ctx.lineTo(w * 0.5, h * 0.68);
+      ctx.lineTo(w * 0.58, h * 0.60);
+      ctx.lineTo(w * 0.8, h * 0.60);
+      ctx.lineTo(w * 0.88, h * 0.72);
+      ctx.lineTo(w, h * 0.72);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      const duneGrad = ctx.createLinearGradient(0, h * 0.72, 0, h);
+      duneGrad.addColorStop(0, '#b91c1c');
+      duneGrad.addColorStop(1, '#450a0a');
+      ctx.fillStyle = duneGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.78);
+      ctx.quadraticCurveTo(w * 0.25, h * 0.70, w * 0.5, h * 0.82);
+      ctx.quadraticCurveTo(w * 0.75, h * 0.92, w, h * 0.76);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+    }
+
+    // 5. Ceres (Asteroid Brightspots)
+    function drawCeresAsteroid(w, h) {
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.68);
+      for (let x = 0; x <= w; x += 10) {
+        let y = h * 0.68 + (Math.sin(x * 0.08) * 12) + (Math.cos(x * 0.03) * 15);
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      const brightGrad = ctx.createRadialGradient(w * 0.5, h * 0.82, 2, w * 0.5, h * 0.82, 35);
+      brightGrad.addColorStop(0, '#ffffff');
+      brightGrad.addColorStop(0.4, '#e0f2fe');
+      brightGrad.addColorStop(1, 'rgba(148, 163, 184, 0)');
+
+      ctx.fillStyle = brightGrad;
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.82, 35, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 6. Io (Active Sulfur Volcanoes)
+    function drawIoVolcanoes(w, h) {
+      const groundGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
+      groundGrad.addColorStop(0, '#ca8a04');
+      groundGrad.addColorStop(0.5, '#eab308');
+      groundGrad.addColorStop(1, '#713f12');
+      ctx.fillStyle = groundGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.68);
+      for (let x = 0; x <= w; x += 20) {
+        ctx.lineTo(x, h * 0.68 + Math.sin(x * 0.02) * 15 + Math.cos(x * 0.05) * 8);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      const cx = w * 0.35;
+      const cy = h * 0.82;
+      ctx.fillStyle = '#1c1917';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 65, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#dc2626';
+      ctx.shadowColor = '#f97316';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 45, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(251, 146, 60, 0.6)';
+      ctx.shadowColor = '#facc15';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.moveTo(cx - 6, cy);
+      ctx.bezierCurveTo(cx - 40 + Math.sin(geyserTime) * 10, cy - 110, cx + 40 + Math.cos(geyserTime) * 10, cy - 110, cx + 6, cy);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 7. Europa (Cracked Ice Shell)
+    function drawEuropaIcyShell(w, h) {
+      const iceGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
+      iceGrad.addColorStop(0, '#0284c7');
+      iceGrad.addColorStop(0.3, '#38bdf8');
+      iceGrad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = iceGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.70);
+      for (let x = 0; x <= w; x += 30) {
+        ctx.lineTo(x, h * 0.70 + Math.sin(x * 0.01) * 8);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      ctx.strokeStyle = 'rgba(180, 83, 9, 0.85)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.05, h * 0.75);
+      ctx.bezierCurveTo(w * 0.2, h * 0.88, w * 0.4, h * 0.78, w * 0.65, h * 0.92);
+      ctx.stroke();
+    }
+
+    // 8. Ganymede (Grooved Ice Terrain)
+    function drawGanymedeGrooves(w, h) {
+      const baseGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
+      baseGrad.addColorStop(0, '#3f3f46');
+      baseGrad.addColorStop(1, '#18181b');
+      ctx.fillStyle = baseGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.66);
+      for (let x = 0; x <= w; x += 15) {
+        ctx.lineTo(x, h * 0.66 + Math.sin(x * 0.015) * 12);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      ctx.strokeStyle = 'rgba(212, 212, 216, 0.35)';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        let startY = h * (0.72 + i * 0.05);
+        ctx.moveTo(0, startY);
+        ctx.bezierCurveTo(w * 0.3, startY + 20, w * 0.7, startY - 20, w, startY + 10);
+        ctx.stroke();
+      }
+
+      const cx = w * 0.8;
+      const cy = h * 0.82;
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#e4e4e7';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 1.5;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * 80, cy + Math.sin(a) * 30);
+        ctx.stroke();
+      }
+    }
+
+    // 9. Titan (Methane Shore)
+    function drawTitanMethaneShore(w, h) {
+      ctx.fillStyle = '#7c2d12';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.66);
+      ctx.quadraticCurveTo(w * 0.3, h * 0.60, w * 0.6, h * 0.70);
+      ctx.quadraticCurveTo(w * 0.8, h * 0.75, w, h * 0.68);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      const liquidGrad = ctx.createLinearGradient(0, h * 0.78, 0, h);
+      liquidGrad.addColorStop(0, '#1c0a00');
+      liquidGrad.addColorStop(0.5, '#451a03');
+      liquidGrad.addColorStop(1, '#000000');
+      ctx.fillStyle = liquidGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.82);
+      ctx.bezierCurveTo(w * 0.35, h * 0.76, w * 0.65, h * 0.88, w, h * 0.80);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+    }
+
+    // 10. Enceladus (Tiger Stripes & Blue Plumes)
+    function drawEnceladusTigerStripes(w, h) {
+      const iceGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
+      iceGrad.addColorStop(0, '#f8fafc');
+      iceGrad.addColorStop(0.5, '#cbd5e1');
+      iceGrad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = iceGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.68);
+      for (let x = 0; x <= w; x += 25) {
+        ctx.lineTo(x, h * 0.68 + Math.cos(x * 0.02) * 10);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      const stripeColors = ['#06b6d4', '#22d3ee', '#38bdf8'];
+      stripeColors.forEach((col, idx) => {
+        ctx.strokeStyle = col;
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        let yOffset = h * (0.76 + idx * 0.06);
+        ctx.moveTo(w * 0.15, yOffset);
+        ctx.bezierCurveTo(w * 0.4, yOffset - 15, w * 0.6, yOffset + 20, w * 0.85, yOffset - 5);
+        ctx.stroke();
+      });
+      ctx.shadowBlur = 0;
+
+      const gx = w * 0.45;
+      const gy = h * 0.78;
+      ctx.save();
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.7)';
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 18;
+
+      ctx.beginPath();
+      ctx.moveTo(gx - 5, gy);
+      ctx.lineTo(gx - 25 + Math.sin(geyserTime * 0.8) * 5, gy - 160);
+      ctx.lineTo(gx + 25 + Math.sin(geyserTime * 0.8) * 5, gy - 160);
+      ctx.lineTo(gx + 5, gy);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 11. Triton (Cryo Geysers)
+    function drawTritonGeysers(w, h) {
+      const groundGrad = ctx.createLinearGradient(0, h * 0.70, 0, h);
+      groundGrad.addColorStop(0, '#8c7785');
+      groundGrad.addColorStop(0.4, '#c29f93');
+      groundGrad.addColorStop(1, '#e3cbbd');
+      ctx.fillStyle = groundGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.70);
+      for (let x = 0; x <= w; x += 20) {
+        ctx.lineTo(x, h * 0.70 + Math.sin(x * 0.03) * 12);
+      }
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      const gx = w * 0.7;
+      const gy = h * 0.71;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(242, 227, 216, 0.75)';
+      ctx.shadowColor = '#f2e3d8';
+      ctx.shadowBlur = 12;
+
+      ctx.beginPath();
+      ctx.moveTo(gx - 4, gy);
+      ctx.lineTo(gx - 10 + Math.sin(geyserTime) * 3, gy - 140);
+      ctx.lineTo(gx + 10 + Math.sin(geyserTime) * 3, gy - 140);
+      ctx.lineTo(gx + 4, gy);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 12. Pluto (Nitrogen Glaciers)
+    function drawPlutoGlaciers(w, h) {
+      ctx.fillStyle = '#3a2012';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.72);
+      ctx.lineTo(w * 0.15, h * 0.60);
+      ctx.lineTo(w * 0.28, h * 0.74);
+      ctx.lineTo(w * 0.4, h * 0.56);
+      ctx.lineTo(w * 0.58, h * 0.76);
+      ctx.lineTo(w, h * 0.76);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+
+      const iceGrad = ctx.createLinearGradient(0, h * 0.78, 0, h);
+      iceGrad.addColorStop(0, '#f5eedc');
+      iceGrad.addColorStop(0.5, '#e8dac1');
+      iceGrad.addColorStop(1, '#c2b093');
+
+      ctx.fillStyle = iceGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.78);
+      ctx.lineTo(w, h * 0.78);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+    }
+
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      initButtons();
+      updateDisplay();
+      renderSurface();
+    });
+  </script>
+</body>
+</html>
